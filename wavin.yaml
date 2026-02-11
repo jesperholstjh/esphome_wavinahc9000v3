@@ -1,0 +1,148 @@
+esphome:
+  name: wavin
+  friendly_name: Wavin
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+external_components:
+  - source: github://jesperholstjh/esphome_wavinahc9000v3
+    components: [wavin_ahc9000]
+    refresh: 0s
+
+logger:
+  baud_rate: 0
+  level: DEBUG
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Wavin Fallback Hotspot"
+
+uart:
+  id: uart_wavin
+  rx_pin: GPIO20
+  tx_pin: GPIO21
+  baud_rate: 38400
+  stop_bits: 1
+  parity: NONE
+
+wavin_ahc9000:
+  id: wavin
+  uart_id: uart_wavin
+  update_interval: 30s
+  flow_control_pin: GPIO10
+  channel_01_friendly_name: "Kontor"
+  channel_02_friendly_name: "Koekken"
+  channel_03_friendly_name: "Stort badevaerelse"
+  channel_04_friendly_name: "Entre"
+  channel_05_friendly_name: "Stue"
+  channel_06_friendly_name: "Gang"
+
+climate:
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Kontor"
+    channel: 1
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Koekken & Stue"
+    members: [2, 5]
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Stort badevaerelse"
+    channel: 3
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Entre"
+    channel: 4
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Gang"
+    channel: 6
+
+sensor:
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Kontor Temperatur"
+    channel: 1
+    type: temperature
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Koekken & Stue Temperatur"
+    channel: 2
+    type: temperature
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Stort badevaerelse Temperatur"
+    channel: 3
+    type: temperature
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Entre Temperatur"
+    channel: 4
+    type: temperature
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Gang Temperatur"
+    channel: 6
+    type: temperature
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Kontor Batteri"
+    channel: 1
+    type: battery
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Koekken & Stue Batteri"
+    channel: 2
+    type: battery
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Stort badevaerelse Batteri"
+    channel: 3
+    type: battery
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Entre Batteri"
+    channel: 4
+    type: battery
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Gang Batteri"
+    channel: 6
+    type: battery
+
+switch:
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Kontor Child Lock"
+    channel: 1
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Koekken Child Lock"
+    channel: 2
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Stort badevaerelse Child Lock"
+    channel: 3
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Entre Child Lock"
+    channel: 4
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Stue Child Lock"
+    channel: 5
+  - platform: wavin_ahc9000
+    wavin_ahc9000_id: wavin
+    name: "Gang Child Lock"
+    channel: 6
