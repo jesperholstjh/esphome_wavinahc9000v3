@@ -1,4 +1,5 @@
 #include "wavin_ahc9000.h"
+#include "esphome/core/application.h"
 #include "esphome/core/log.h"
 #include "esphome/components/sensor/sensor.h"
 #include <vector>
@@ -289,6 +290,7 @@ bool WavinAHC9000::read_registers(uint8_t category, uint8_t page, uint8_t index,
   // Retry logic: attempt up to IO_RETRY_ATTEMPTS. First attempt failures are logged at DEBUG; only the
   // final failed attempt escalates to WARN to reduce log noise from transient bus glitches.
   for (uint8_t attempt = 0; attempt < IO_RETRY_ATTEMPTS; attempt++) {
+    App.feed_wdt();
     uint8_t msg[8];
     msg[0] = DEVICE_ADDR;
     msg[1] = FC_READ;
@@ -357,6 +359,7 @@ bool WavinAHC9000::read_registers(uint8_t category, uint8_t page, uint8_t index,
 bool WavinAHC9000::write_register(uint8_t category, uint8_t page, uint8_t index, uint16_t value) {
   // Similar retry strategy as read_registers() with severity gating.
   for (uint8_t attempt = 0; attempt < IO_RETRY_ATTEMPTS; attempt++) {
+    App.feed_wdt();
     uint8_t msg[10];
     msg[0] = DEVICE_ADDR;
     msg[1] = FC_WRITE;
@@ -419,6 +422,7 @@ bool WavinAHC9000::write_register(uint8_t category, uint8_t page, uint8_t index,
 bool WavinAHC9000::write_masked_register(uint8_t category, uint8_t page, uint8_t index, uint16_t and_mask, uint16_t or_mask) {
   // Similar retry strategy as write_register(); reduces spurious WARN logs.
   for (uint8_t attempt = 0; attempt < IO_RETRY_ATTEMPTS; attempt++) {
+    App.feed_wdt();
     uint8_t msg[12];
     msg[0] = DEVICE_ADDR;
     msg[1] = FC_WRITE_MASKED;
