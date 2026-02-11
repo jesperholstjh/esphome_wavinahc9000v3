@@ -1223,7 +1223,7 @@ climate::ClimateTraits WavinZoneClimate::traits() {
   }
   t.set_visual_min_temperature(vmin);
   t.set_visual_max_temperature(vmax);
-  t.set_visual_temperature_step(0.5f);
+  t.set_visual_temperature_step(0.1f);
   return t;
 }
 void WavinZoneClimate::control(const climate::ClimateCall &call) {
@@ -1269,31 +1269,31 @@ void WavinZoneClimate::control(const climate::ClimateCall &call) {
     float new_hi = current_hi;
     if (has_lo) new_lo = *call.get_target_temperature_low();
     if (has_hi) new_hi = *call.get_target_temperature_high();
-    auto round05 = [](float v) -> float { return std::round(v * 2.0f) / 2.0f; };
-    // Clamp to global sane bounds first, then round to 0.5°C step
+    auto round01 = [](float v) -> float { return std::round(v * 10.0f) / 10.0f; };
+    // Clamp to global sane bounds first, then round to 0.1°C step
     if (!std::isnan(new_lo)) {
       if (new_lo < 5.0f) new_lo = 5.0f;
       if (new_lo > 35.0f) new_lo = 35.0f;
-      new_lo = round05(new_lo);
+      new_lo = round01(new_lo);
     }
     if (!std::isnan(new_hi)) {
       if (new_hi < 5.0f) new_hi = 5.0f;
       if (new_hi > 35.0f) new_hi = 35.0f;
-      new_hi = round05(new_hi);
+      new_hi = round01(new_hi);
     }
     // Enforce at least 1.0C separation if both present (or infer using the unchanged side)
     if (!std::isnan(new_lo) && !std::isnan(new_hi)) {
       if (new_hi < new_lo + 1.0f) {
         if (has_hi && !has_lo) {
-          new_lo = round05(new_hi - 1.0f);
+          new_lo = round01(new_hi - 1.0f);
         } else {
-          new_hi = round05(new_lo + 1.0f);
+          new_hi = round01(new_lo + 1.0f);
         }
       }
     } else if (!std::isnan(new_lo) && std::isnan(new_hi) && !std::isnan(current_hi)) {
-      if (current_hi < new_lo + 1.0f) new_lo = round05(current_hi - 1.0f);
+      if (current_hi < new_lo + 1.0f) new_lo = round01(current_hi - 1.0f);
     } else if (!std::isnan(new_hi) && std::isnan(new_lo) && !std::isnan(current_lo)) {
-      if (new_hi < current_lo + 1.0f) new_hi = round05(current_lo + 1.0f);
+      if (new_hi < current_lo + 1.0f) new_hi = round01(current_lo + 1.0f);
     }
     // Write only the values that actually changed after adjustment
     if (!std::isnan(new_lo) && (std::isnan(current_lo) || std::fabs(new_lo - current_lo) > 0.049f)) {
