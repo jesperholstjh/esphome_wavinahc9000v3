@@ -173,7 +173,7 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
 
   float temp_divisor_{10.0f};
   uint32_t last_poll_ms_{0};
-  uint32_t receive_timeout_ms_{1000};
+  uint32_t receive_timeout_ms_{500};
   uint32_t suspend_polling_until_{0};
   GPIOPin *tx_enable_pin_{nullptr};
   GPIOPin *flow_control_pin_{nullptr};
