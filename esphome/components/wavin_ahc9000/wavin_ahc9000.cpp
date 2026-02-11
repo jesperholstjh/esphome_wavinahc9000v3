@@ -26,7 +26,17 @@ static uint16_t crc16(const uint8_t *frame, size_t len) {
   return temp;
 }
 
-void WavinAHC9000::setup() { ESP_LOGCONFIG(TAG, "Wavin AHC9000 hub setup"); }
+void WavinAHC9000::setup() {
+  ESP_LOGCONFIG(TAG, "Wavin AHC9000 hub setup");
+  if (this->flow_control_pin_ != nullptr) {
+    this->flow_control_pin_->setup();
+    this->flow_control_pin_->digital_write(false);
+  }
+  if (this->tx_enable_pin_ != nullptr) {
+    this->tx_enable_pin_->setup();
+    this->tx_enable_pin_->digital_write(false);
+  }
+}
 void WavinAHC9000::loop() {}
 
 void WavinAHC9000::set_channel_friendly_name(uint8_t channel, const std::string &name) {
