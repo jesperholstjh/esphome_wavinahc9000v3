@@ -42,7 +42,15 @@ void WavinAHC9000::loop() {}
 void WavinAHC9000::set_channel_friendly_name(uint8_t channel, const std::string &name) {
   if (channel < 1 || channel > 16) return;
   if (this->channel_friendly_names_.size() < 17) this->channel_friendly_names_.assign(17, std::string());
-  this->channel_friendly_names_[channel] = name;
+  // Sanitize: strip characters that could break YAML double-quoted strings
+  std::string safe;
+  safe.reserve(name.size());
+  for (char c : name) {
+    if (c == '"' || c == '\\' || c == '\n' || c == '\r' || c == '\t')
+      continue;
+    safe += c;
+  }
+  this->channel_friendly_names_[channel] = safe;
 }
 
 std::string WavinAHC9000::get_channel_friendly_name(uint8_t channel) const {
@@ -107,7 +115,7 @@ void WavinAHC9000::update() {
       bool heating = (regs[0] & CH_TIMER_EVENT_OUTP_ON_MASK) != 0;
       st.action = heating ? climate::CLIMATE_ACTION_HEATING : climate::CLIMATE_ACTION_IDLE;
     }
-    if (!st.all_tp_lost && st.primary_index > 0) {
+    if (!st.all_tp_lost && st.primary_index > 0 && st.primary_index <= 16) {
       uint8_t elem_page = (uint8_t) (st.primary_index - 1);
       if (this->read_registers(CAT_ELEMENTS, elem_page, 0x00, 11, regs) && regs.size() > ELEM_AIR_TEMPERATURE) {
         st.current_temp_c = this->raw_to_c(regs[ELEM_AIR_TEMPERATURE]);
@@ -199,7 +207,7 @@ void WavinAHC9000::update() {
           break;
         }
         case 4: {
-          if (!st.all_tp_lost && st.primary_index > 0) {
+          if (!st.all_tp_lost && st.primary_index > 0 && st.primary_index <= 16) {
             uint8_t elem_page = (uint8_t) (st.primary_index - 1);
             if (this->read_registers(CAT_ELEMENTS, elem_page, 0x00, 11, regs) && regs.size() > ELEM_AIR_TEMPERATURE) {
               st.current_temp_c = this->raw_to_c(regs[ELEM_AIR_TEMPERATURE]);
@@ -270,7 +278,7 @@ void WavinAHC9000::dump_channel_floor_limits(uint8_t channel) {
   }
   // Try elements if primary known
   auto it = this->channels_.find(channel);
-  if (it != this->channels_.end() && it->second.primary_index > 0 && !it->second.all_tp_lost) {
+  if (it != this->channels_.end() && it->second.primary_index > 0 && it->second.primary_index <= 16 && !it->second.all_tp_lost) {
     uint8_t elem_page = (uint8_t) (it->second.primary_index - 1);
     ESP_LOGI(TAG, "DUMP ch=%u ELEMENTS page=%u indices 0x00..0x10:", (unsigned) channel, (unsigned) elem_page);
     for (uint8_t idx = 0; idx <= 0x10; idx++) {
@@ -331,7 +339,7 @@ bool WavinAHC9000::read_registers(uint8_t category, uint8_t page, uint8_t index,
         if (c < 0) break;
         buf.push_back((uint8_t) c);
         if (buf.size() >= 5) {
-          uint8_t expected = (uint8_t) (buf[2] + 5);
+          size_t expected = (size_t) buf[2] + 5;  // use size_t to prevent uint8_t overflow
           if (buf[0] == DEVICE_ADDR && buf[1] == FC_READ && buf.size() == expected) {
             uint16_t rcrc = crc16(buf.data(), buf.size());
             if (rcrc != 0) {
@@ -345,7 +353,7 @@ bool WavinAHC9000::read_registers(uint8_t category, uint8_t page, uint8_t index,
             }
             uint8_t bytes = buf[2];
             out.clear();
-            for (uint8_t i = 0; i + 1 < bytes; i += 2) {
+            for (uint8_t i = 0; i + 1 < bytes && (size_t)(3 + i + 1) < buf.size(); i += 2) {
               uint16_t w = (uint16_t) (buf[3 + i] << 8) | buf[3 + i + 1];
               out.push_back(w);
             }

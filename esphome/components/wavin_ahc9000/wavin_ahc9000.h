@@ -122,7 +122,12 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
 
   // Helpers
   float raw_to_c(float raw) const { return raw / this->temp_divisor_; }
-  uint16_t c_to_raw(float c) const { return static_cast<uint16_t>(c * this->temp_divisor_ + 0.5f); }
+  uint16_t c_to_raw(float c) const {
+    float raw = c * this->temp_divisor_ + 0.5f;
+    if (raw < 0.0f) raw = 0.0f;
+    if (raw > 65535.0f) raw = 65535.0f;
+    return static_cast<uint16_t>(raw);
+  }
 
   // Simple cache per channel
   struct ChannelState {
