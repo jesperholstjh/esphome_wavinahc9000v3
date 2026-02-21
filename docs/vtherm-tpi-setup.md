@@ -14,7 +14,7 @@ Instead of toggling the Wavin controller's mode (HEAT/OFF), we keep Wavin perman
 ## Prerequisites
 
 - Wavin AHC-9000 ESPHome component installed and running
-- Climate entities exposed in Home Assistant (e.g. `climate.kontor`)
+- Climate entities exposed in Home Assistant (e.g. `climate.master_bedroom`)
 - [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat) (HACS integration)
 
 ## Step 1: Create Input Boolean Helpers
@@ -25,7 +25,7 @@ Create one toggle per zone:
 
 | Helper                                | Zone              |
 |---------------------------------------|-------------------|
-| `input_boolean.kontor_heating`        | Kontor            |
+| `input_boolean.master_bedroom_heating` | Master Bedroom   |
 | `input_boolean.koekken_stue_heating`  | Koekken & Stue    |
 | `input_boolean.badevaerelse_heating`   | Stort Badevaerelse|
 | `input_boolean.entre_heating`         | Entre             |
@@ -37,17 +37,17 @@ In Home Assistant: **Settings > Automations & Scenes > Create Automation**
 
 Create one automation per zone. Each automation listens for the input boolean toggling and sets the Wavin climate setpoint accordingly.
 
-### Single-channel zone example (Kontor)
+### Single-channel zone example (Master Bedroom)
 
 ```yaml
-alias: "Wavin Kontor Heating Demand"
+alias: "Wavin Master Bedroom Heating Demand"
 triggers:
   - trigger: state
-    entity_id: input_boolean.kontor_heating
+    entity_id: input_boolean.master_bedroom_heating
 actions:
   - action: climate.set_temperature
     target:
-      entity_id: climate.kontor
+      entity_id: climate.master_bedroom
     data:
       temperature: "{{ 35 if trigger.to_state.state == 'on' else 7 }}"
 ```
@@ -76,7 +76,7 @@ Repeat for each remaining zone (`badevaerelse`, `entre`, `gang`).
 For each zone, create a new Versatile Thermostat:
 
 1. **Type**: `over_switch`
-2. **Switch entity**: The corresponding `input_boolean` (e.g. `input_boolean.kontor_heating`)
+2. **Switch entity**: The corresponding `input_boolean` (e.g. `input_boolean.master_bedroom_heating`)
 3. **Temperature sensor**: Your room temperature sensor (this is the sensor VTherm uses to decide when to heat -- not the Wavin floor sensor)
 4. **TPI coefficients**: Start with defaults (`coef_int: 0.6`, `coef_ext: 0.01`) and tune as needed
 

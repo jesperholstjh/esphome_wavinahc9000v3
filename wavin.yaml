@@ -40,7 +40,7 @@ wavin_ahc9000:
   uart_id: uart_wavin
   update_interval: 30s
   flow_control_pin: GPIO10
-  channel_01_friendly_name: "Kontor"
+  channel_01_friendly_name: "Master Bedroom"
   channel_02_friendly_name: "Koekken"
   channel_03_friendly_name: "Stort badevaerelse"
   channel_04_friendly_name: "Entre"
@@ -50,7 +50,7 @@ wavin_ahc9000:
 climate:
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
-    name: "Kontor"
+    name: "Master Bedroom"
     channel: 1
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
@@ -72,7 +72,7 @@ climate:
 sensor:
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
-    name: "Kontor Temperatur"
+    name: "Master Bedroom Temperatur"
     channel: 1
     type: temperature
   - platform: wavin_ahc9000
@@ -97,7 +97,7 @@ sensor:
     type: temperature
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
-    name: "Kontor Batteri"
+    name: "Master Bedroom Batteri"
     channel: 1
     type: battery
   - platform: wavin_ahc9000
@@ -124,7 +124,7 @@ sensor:
 switch:
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
-    name: "Kontor Child Lock"
+    name: "Master Bedroom Child Lock"
     channel: 1
   - platform: wavin_ahc9000
     wavin_ahc9000_id: wavin
