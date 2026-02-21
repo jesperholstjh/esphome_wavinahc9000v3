@@ -546,6 +546,32 @@ void WavinAHC9000::write_channel_mode(uint8_t channel, climate::ClimateMode mode
   }
   if (ok) {
     this->channels_[channel].mode = (mode == climate::CLIMATE_MODE_OFF) ? climate::CLIMATE_MODE_OFF : climate::CLIMATE_MODE_HEAT;
+
+    // Setpoint-based OFF: the AHC-9000 ignores standby mode writes in practice,
+    // so we force a very low setpoint to make the controller stop heating.
+    if (mode == climate::CLIMATE_MODE_OFF) {
+      float current_sp = this->channels_[channel].setpoint_c;
+      if (!std::isnan(current_sp) && current_sp > OFF_SETPOINT_C) {
+        this->pre_off_setpoint_[channel] = current_sp;
+        ESP_LOGD(TAG, "Mode OFF ch=%u: forcing setpoint to %.1fC (saved %.1fC)", (unsigned) channel, OFF_SETPOINT_C, current_sp);
+      } else {
+        ESP_LOGD(TAG, "Mode OFF ch=%u: forcing setpoint to %.1fC (no valid setpoint to save)", (unsigned) channel, OFF_SETPOINT_C);
+      }
+      uint16_t raw_off = this->c_to_raw(OFF_SETPOINT_C);
+      this->write_register(CAT_PACKED, page, PACKED_MANUAL_TEMPERATURE, raw_off);
+    } else {
+      // HEAT: restore previous setpoint if we saved one
+      auto it = this->pre_off_setpoint_.find(channel);
+      if (it != this->pre_off_setpoint_.end()) {
+        float restore_sp = it->second;
+        ESP_LOGD(TAG, "Mode HEAT ch=%u: restoring setpoint to %.1fC", (unsigned) channel, restore_sp);
+        uint16_t raw_restore = this->c_to_raw(restore_sp);
+        this->write_register(CAT_PACKED, page, PACKED_MANUAL_TEMPERATURE, raw_restore);
+        this->channels_[channel].setpoint_c = restore_sp;
+        this->pre_off_setpoint_.erase(it);
+      }
+    }
+
     this->urgent_channels_.push_back(channel);
     this->suspend_polling_until_ = millis() + 100; // 100 ms guard
   } else {

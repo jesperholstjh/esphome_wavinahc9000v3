@@ -174,6 +174,7 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
   std::vector<std::string> channel_friendly_names_; // 1-based index mapping (size >=17)
   std::vector<uint8_t> active_channels_;
   std::map<uint8_t, climate::ClimateMode> desired_mode_; // desired mode to reconcile after refresh
+  std::map<uint8_t, float> pre_off_setpoint_;  // setpoint before OFF, for restore on HEAT
   std::set<uint8_t> strict_mode_channels_; // channels opting into strict baseline writes
 
   float temp_divisor_{10.0f};
@@ -229,6 +230,9 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
   static constexpr uint16_t PACKED_CONFIGURATION_PROGRAM_MASK = 0x0018; // extended clear: bits 3 and 4
   static constexpr uint16_t PACKED_CONFIGURATION_STRICT_UNLOCK_MASK = 0x0078; // bits 3..6 (avoid touching mode bits 0..2)
   static constexpr uint16_t PACKED_CONFIGURATION_CHILD_LOCK_MASK = 0x0800; // child lock bit (0x4000->0x4800)
+
+  // Setpoint-based OFF: thermostat minimum forces controller to stop heating
+  static constexpr float OFF_SETPOINT_C = 6.0f;
 
   // I/O reliability: number of attempts for read/write before escalating to WARN
   static constexpr uint8_t IO_RETRY_ATTEMPTS = 2; // first failure logged at DEBUG, final at WARN
