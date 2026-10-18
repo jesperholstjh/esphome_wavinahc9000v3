@@ -6,6 +6,7 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/switch/switch.h"
 #include "esphome/core/component.h"
+#include "esphome/core/hal.h"
 
 #include <vector>
 #include <map>
@@ -105,6 +106,7 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
   // Data access
   float get_channel_current_temp(uint8_t channel) const;
   float get_channel_setpoint(uint8_t channel) const;
+  uint32_t get_channel_setpoint_changed_ms(uint8_t channel) const;
   float get_channel_floor_temp(uint8_t channel) const;
   float get_channel_floor_min_temp(uint8_t channel) const;
   float get_channel_floor_max_temp(uint8_t channel) const;
@@ -137,6 +139,7 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
     float floor_min_c{NAN};
     float floor_max_c{NAN};
     float setpoint_c{NAN};
+    uint32_t setpoint_changed_ms{0};  // millis() of last setpoint change, used by group climates
     climate::ClimateMode mode{climate::CLIMATE_MODE_HEAT};
     climate::ClimateAction action{climate::CLIMATE_ACTION_OFF};
     uint8_t battery_pct{255}; // 0..100; 255=unknown
@@ -145,6 +148,10 @@ class WavinAHC9000 : public PollingComponent, public uart::UARTDevice {
     bool has_floor_sensor{false};
     bool child_lock{false};
   };
+  static void set_setpoint_(ChannelState &st, float c) {
+    if (std::isnan(st.setpoint_c) || std::fabs(c - st.setpoint_c) > 0.05f) st.setpoint_changed_ms = millis();
+    st.setpoint_c = c;
+  }
 
   std::map<uint8_t, ChannelState> channels_;
   std::vector<WavinZoneClimate *> single_ch_climates_;

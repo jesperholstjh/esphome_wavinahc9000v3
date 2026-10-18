@@ -104,7 +104,7 @@ void WavinAHC9000::update() {
       }
     }
     if (this->read_registers(CAT_PACKED, ch_page, PACKED_MANUAL_TEMPERATURE, 1, regs) && regs.size() >= 1) {
-      st.setpoint_c = this->raw_to_c(regs[0]);
+      set_setpoint_(st, this->raw_to_c(regs[0]));
     }
     // Read floor min/max (read-only) during urgent refresh in one combined request (reduces bus load)
     if (this->read_registers(CAT_PACKED, ch_page, PACKED_FLOOR_MIN_TEMPERATURE, 2, regs) && regs.size() >= 2) {
@@ -182,7 +182,7 @@ void WavinAHC9000::update() {
         }
         case 2: {
           if (this->read_registers(CAT_PACKED, ch_page, PACKED_MANUAL_TEMPERATURE, 1, regs) && regs.size() >= 1) {
-            st.setpoint_c = this->raw_to_c(regs[0]);
+            set_setpoint_(st, this->raw_to_c(regs[0]));
             ESP_LOGD(TAG, "CH%u setpoint=%.1fC", ch_num, st.setpoint_c);
           } else {
             ESP_LOGW(TAG, "CH%u: setpoint read failed", ch_num);
@@ -508,7 +508,7 @@ void WavinAHC9000::write_channel_setpoint(uint8_t channel, float celsius) {
   uint8_t page = (uint8_t) (channel - 1);
   uint16_t raw = this->c_to_raw(celsius);
   if (this->write_register(CAT_PACKED, page, PACKED_MANUAL_TEMPERATURE, raw)) {
-    this->channels_[channel].setpoint_c = celsius;
+    set_setpoint_(this->channels_[channel], celsius);
   // Schedule a quick refresh on next cycle and briefly suspend normal polling to avoid collisions
   this->urgent_channels_.push_back(channel);
   this->suspend_polling_until_ = millis() + 100; // 100 ms guard
@@ -1217,6 +1217,10 @@ float WavinAHC9000::get_channel_setpoint(uint8_t channel) const {
   auto it = this->channels_.find(channel);
   return it == this->channels_.end() ? NAN : it->second.setpoint_c;
 }
+uint32_t WavinAHC9000::get_channel_setpoint_changed_ms(uint8_t channel) const {
+  auto it = this->channels_.find(channel);
+  return it == this->channels_.end() ? 0 : it->second.setpoint_changed_ms;
+}
 float WavinAHC9000::get_channel_floor_temp(uint8_t channel) const {
   auto it = this->channels_.find(channel);
   return it == this->channels_.end() ? NAN : it->second.floor_temp_c;
@@ -1374,8 +1378,14 @@ void WavinZoneClimate::update_from_parent() {
       this->action = raw_action;
     }
   } else if (!this->members_.empty()) {
-    float sum_curr = 0.0f, sum_set = 0.0f;
+    float sum_curr = 0.0f;
     int n_curr = 0;
+    // Report the most recently changed member setpoint, not the average: with one thermostat per
+    // member, averaging turns a 0.5 step on one wall unit into an odd value (23 + 22.5 -> 22.75),
+    // which a follower (VTherm) then writes back to all members.
+    // ponytail: millis() wraps after ~49 days; a wrap can pick the older member once, until the next change.
+    float latest_set = NAN;
+    uint32_t latest_ms = 0;
     bool any_heat = false;
     bool all_off = true;
     for (auto ch : this->members_) {
@@ -1385,12 +1395,16 @@ void WavinZoneClimate::update_from_parent() {
         n_curr++;
       }
       float s = this->parent_->get_channel_setpoint(ch);
-      if (!std::isnan(s)) sum_set += s;
+      uint32_t s_ms = this->parent_->get_channel_setpoint_changed_ms(ch);
+      if (!std::isnan(s) && (std::isnan(latest_set) || s_ms >= latest_ms)) {
+        latest_set = s;
+        latest_ms = s_ms;
+      }
       if (this->parent_->get_channel_action(ch) == climate::CLIMATE_ACTION_HEATING) any_heat = true;
       if (this->parent_->get_channel_mode(ch) != climate::CLIMATE_MODE_OFF) all_off = false;
     }
     if (n_curr > 0) this->current_temperature = sum_curr / n_curr;
-    if (!this->members_.empty()) this->target_temperature = sum_set / this->members_.size();
+    if (!std::isnan(latest_set)) this->target_temperature = latest_set;
     this->mode = all_off ? climate::CLIMATE_MODE_OFF : climate::CLIMATE_MODE_HEAT;
     // Group action: prefer temperature comparison with deadband, fallback to any member heating
     const float db = 0.3f;
