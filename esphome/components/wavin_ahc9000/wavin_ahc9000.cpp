@@ -1379,9 +1379,9 @@ void WavinZoneClimate::update_from_parent() {
   } else if (!this->members_.empty()) {
     float sum_curr = 0.0f;
     int n_curr = 0;
-    // Report the most recently changed member setpoint, not the average: with one thermostat per
-    // member, averaging turns a 0.5 step on one wall unit into an odd value (23 + 22.5 -> 22.75),
-    // which a follower (VTherm) then writes back to all members.
+    // Report the most recently changed member setpoint, not the average: a wall thermostat shared by
+    // several members only writes its new setpoint to one channel, so averaging turns a 0.5 step into
+    // an odd value (23 + 22.5 -> 22.75), which a follower (VTherm) then writes back to all members.
     // ponytail: millis() wraps after ~49 days; a wrap can pick the older member once, until the next change.
     float latest_set = NAN;
     uint32_t latest_ms = 0;
